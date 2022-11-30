@@ -198,7 +198,9 @@ where
                 self.total_cw20_deposits.update(
                     deps.storage,
                     env.block.height,
-                    |total| -> StdResult<u64> { Ok(total.unwrap_or_default().checked_sub(1u64).unwrap()) },
+                    |total| -> StdResult<u64> {
+                        Ok(total.unwrap_or_default().checked_sub(1u64).unwrap())
+                    },
                 )?;
 
                 Ok(Response::new()
@@ -218,6 +220,8 @@ where
         info: MessageInfo,
         owner: String,
         token_id: String,
+        cw20_address: String,
+        ask_price: Uint128,
     ) -> Result<Response<C>, ContractError> {
         let cw721_contract_address = info.sender.clone().into_string();
 
@@ -225,6 +229,8 @@ where
             owner: owner.clone(),
             contract: info.sender.into_string(),
             token_id: token_id.clone(),
+            cw20_address: cw20_address.clone(),
+            ask_price: ask_price.clone(),
         };
         self.cw721_deposits
             .save(
@@ -238,6 +244,8 @@ where
         Ok(Response::new()
             .add_attribute("execute", "cw721_deposit")
             .add_attribute("owner", owner)
+            .add_attribute("cw20_address", cw20_address)
+            .add_attribute("ask_price", ask_price)
             .add_attribute("contract", cw721_contract_address.to_string()))
     }
 
@@ -262,7 +270,7 @@ where
 
         let exe_msg = nft::contract::ExecuteMsg::TransferNft {
             recipient: owner,
-            token_id: token_id,
+            token_id,
         };
         let msg = WasmMsg::Execute {
             contract_addr: contract,
@@ -360,9 +368,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Cw20Deposits { address } => {
             to_binary(&contract.query_cw20_deposits(deps, address)?)
         }
-        QueryMsg::Cw721DepositsByContract {
-            contract_addr,
-        } => to_binary(&contract.query_cw721_by_contract(deps, contract_addr)?),
+        QueryMsg::Cw721DepositsByContract { contract_addr } => {
+            to_binary(&contract.query_cw721_by_contract(deps, contract_addr)?)
+        }
         QueryMsg::Cw721DepositsByOwner { address } => {
             to_binary(&contract.query_cw721_by_owner(deps, address)?)
         }
@@ -394,9 +402,18 @@ pub fn receive_cw721(
     cw721_msg: Cw721ReceiveMsg,
 ) -> Result<Response, ContractError> {
     match from_binary(&cw721_msg.msg) {
-        Ok(Cw721HookMsg::Deposit {}) => {
-            contract.execute_cw721_deposit(deps, env, info, cw721_msg.sender, cw721_msg.token_id)
-        }
+        Ok(Cw721HookMsg::Deposit {
+            cw20_address,
+            ask_price,
+        }) => contract.execute_cw721_deposit(
+            deps,
+            env,
+            info,
+            cw721_msg.sender,
+            cw721_msg.token_id,
+            cw20_address,
+            ask_price,
+        ),
         _ => Err(ContractError::CustomError {
             val: "Invalid Cw721HookMsg".to_string(),
         }),

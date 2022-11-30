@@ -1,26 +1,33 @@
 use cosmwasm_std::Uint128;
+use cw20::Cw20ReceiveMsg;
 use cw721::Cw721ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cw20::Cw20ReceiveMsg;
 
-use crate::state::{Cw20Deposits, Deposits, Cw721Deposits};
+use crate::state::{Cw20Deposits, Cw721Deposits, Deposits};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct InstantiateMsg {
-
-}
+pub struct InstantiateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Deposit { },
-    Withdraw { amount:u128, denom:String },
+    Deposit {},
+    Withdraw {
+        amount: u128,
+        denom: String,
+    },
     Receive(Cw20ReceiveMsg),
     ReceiveNft(Cw721ReceiveMsg),
-    WithdrawCw20 { address: String, amount:Uint128 },
-    WithdrawNft { contract_addr: String, token_id: String },
+    WithdrawCw20 {
+        address: String,
+        amount: Uint128,
+    },
+    WithdrawNft {
+        contract_addr: String,
+        token_id: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -28,7 +35,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     Deposits { address: String },
     Cw20Deposits { address: String },
-    Cw721DepositsByContract {contract_addr: String },
+    Cw721DepositsByContract { contract_addr: String },
     Cw721DepositsByOwner { address: String },
 }
 
@@ -57,11 +64,14 @@ pub enum MigrateMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
-    Deposit { },
+    Deposit {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cw721HookMsg {
-    Deposit { }
+    Deposit {
+        cw20_address: String,
+        ask_price: Uint128,
+    },
 }
