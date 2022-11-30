@@ -164,6 +164,60 @@ where
             .add_attribute("amount", amount.to_string()))
     }
 
+    fn execute_cw721_purchase(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        owner: String,
+        amount: Uint128,
+        token_id: String,
+        nft_contract_address: String,
+    ) -> Result<Response<C>, Self::Err> {
+        let cw20_contract_address = info.sender.clone().into_string();
+
+        // load the NFT
+        let nft = self
+            .cw721_deposits
+            .load(deps.storage, (&nft_contract_address, &token_id))?;
+
+        // check if amount is greater than ask_price
+        // if not, return a useful error
+        if nft.ask_price != amount {
+            return Err(ContractError::InsufficientPayment {
+                ask_price: nft.ask_price,
+            });
+        }
+
+        // otherwise, transfer the NFT to `owner`
+        self.cw721_deposits
+            .remove(
+                deps.storage,
+                (&nft_contract_address, &token_id),
+                env.block.height,
+            )
+            .unwrap();
+
+        let exe_msg = nft::contract::ExecuteMsg::TransferNft {
+            recipient: owner.clone(),
+            token_id: token_id.clone(),
+        };
+        let msg = WasmMsg::Execute {
+            contract_addr: nft_contract_address.clone(),
+            msg: to_binary(&exe_msg)?,
+            funds: vec![],
+        };
+
+        Ok(Response::new()
+            .add_attribute("execute", "cw20_deposit")
+            .add_attribute("owner", owner)
+            .add_attribute("contract", cw20_contract_address.to_string())
+            .add_attribute("token_id", token_id)
+            .add_attribute("contract", nft_contract_address)
+            .add_attribute("amount", amount.to_string())
+            .add_message(msg))
+    }
+
     fn execute_cw20_withdraw(
         &self,
         deps: DepsMut,
@@ -388,6 +442,18 @@ pub fn receive_cw20(
         Ok(Cw20HookMsg::Deposit {}) => {
             contract.execute_cw20_deposit(deps, env, info, cw20_msg.sender, cw20_msg.amount)
         }
+        Ok(Cw20HookMsg::PurchaseNFT {
+            token_id,
+            nft_contract_address,
+        }) => contract.execute_cw721_purchase(
+            deps,
+            env,
+            info,
+            cw20_msg.sender,
+            cw20_msg.amount,
+            token_id,
+            nft_contract_address,
+        ),
         _ => Err(ContractError::CustomError {
             val: "Invalid Cw20HookMsg".to_string(),
         }),

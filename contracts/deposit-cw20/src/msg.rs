@@ -65,6 +65,10 @@ pub enum MigrateMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum Cw20HookMsg {
     Deposit {},
+    PurchaseNFT {
+        token_id: String,
+        nft_contract_address: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

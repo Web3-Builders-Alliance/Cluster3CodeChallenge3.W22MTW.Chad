@@ -20,7 +20,7 @@ where
 
     pub total_cw20_deposits: SnapshotItem<'a, u64>,
     pub cw20_deposits: IndexedMap<'a, (&'a str, &'a str), Cw20Deposits, Cw20DepositIndexes<'a>>,
-    //key is contract address, token_id
+    /// key is contract address, token_id
     pub cw721_deposits:
         IndexedSnapshotMap<'a, (&'a str, &'a str), Cw721Deposits, Cw721DepositIndexes<'a>>,
     pub(crate) _custom_response: PhantomData<C>,
